@@ -1,0 +1,24 @@
+{
+  "name": "gharry",
+  "version": "1.0.0",
+  "description": "crane for barge",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/racecourse/gharry.git"
+  },
+  "author": "mulberry10",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/racecourse/gharry/issues"
+  },
+  "homepage": "https://github.com/racecourse/gharry#readme",
+  "dependencies": {
+    "chokidar": "^1.6.1",
+    "cli-color": "^1.2.0",
+    "commander": "^2.9.0"
+  }
+}
