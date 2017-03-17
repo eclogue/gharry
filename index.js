@@ -1,37 +1,36 @@
-const monitor = require('chokidar');
-const spawn = require('child_process').spawn;
-const exec = require('child_process').exec;
-const color = require('cli-color');
-const fs = require('fs');
-const util = require('util');
-const commander = require('commander');
-const os = require('os');
+var monitor = require('chokidar');
+var spawn = require('child_process').spawn;
+var exec = require('child_process').exec;
+var color = require('cli-color');
+var fs = require('fs');
+var util = require('util');
+var commander = require('commander');
+var os = require('os');
+var path = require('path');
 
-
-const pwd = process.env.PWD;
-let config = {
+var pwd = process.env.PWD;
+var config = {
   pid: os.tmpDir() + '/gharry.pid',
   pwd: pwd,
   script: 'js',
   execute: 'index.js',
   ignored: '',
   watch: '.',
+  safe: false,
 };
-
-
-const run = function () {
-  console.log(config);
-  monitor.watch('.', { ignored: ['node_modules'] })
+// process.stdout.write(color.erase.screen);
+// process.stdout.write(color.reset);
+var run = function () {
+  monitor.watch(config.watch, { ignored: config.ignore })
     .on('change', function (path) {
-      console.log('%%%%%%%%change');
-      startUp();
+      console.log(color.cyan('path changed:' + path));
+      startUp(path);
     })
     .on('ready', function () {
-      console.log('rrrrrrrready');
       startUp();
     })
-    .on('unlink', function () {
-      startUp();
+    .on('unlink', function (path) {
+      startUp(path);
     })
     .on('error', function (err) {
       console.log(err);
@@ -40,20 +39,34 @@ const run = function () {
 
 };
 
-const startUp = function () {
+var startUp = function (file = '') {
+  console.log(color.bgCyan('gharry start up process'));
   if (!fs.existsSync(config.pid)) {
-    let fd = fs.openSync(config.pid, 'w+');
+    var fd = fs.openSync(config.pid, 'w+');
     fs.writeSync(fd, '');
     fs.close(fd);
   }
-  let pid = fs.readFileSync(config.pid);
+  var pid = fs.readFileSync(config.pid);
   pid = pid.toString().replace(/(\n|\r|(\r\n)|(\u0085)|(\u2028)|(\u2029))/g, '');
-  if (pid) {
-    let cmd = util.format("ps -C %s | grep -v PID | awk '{print $1}' | xargs kill -15", pid);
+  if (pid !== 'undefined') {
+    var cmd = '';
+    if(!config.safe) {
+      cmd = util.format("ps -C %s | grep -v PID | awk '{print $1}' | xargs kill -15", pid);
+    } else {
+      cmd = util.format("ps -C %s | grep -v PID | awk '{print $1}'", pid);
+    }
     exec(cmd, function (err, stdout, stderr) {
       if (err) {
         console.log(color.red(err.message));
         console.log(stdout, stderr);
+      }
+      if(stdout && config.safe){
+        if(file === config.execute) {
+          process.kill(pid, 'SIGTERM'); // 重启主进程
+        } else {
+          process.kill(pid, 'SIGUSR1');
+          process.kill(pid, 'SIGUSR2');
+        }
       } else {
         watching();
       }
@@ -63,20 +76,19 @@ const startUp = function () {
   }
 };
 
-const stop = function () {
+var stop = function () {
 
 };
 
 
-const watching = () => {
-  const server = spawn.apply(null, [config.script, [config.execute], { cwd: config.pwd }]);
-  console.log(color.green('child process pid: ', server.pid));
-  console.log(config.pid);
-  const fd = fs.openSync(config.pid, 'w+');
+var watching = () => {
+  var server = spawn.apply(null, [config.script, [config.execute], { cwd: config.pwd }]);
+  console.log(color.green('listen process pid: ', server.pid));
+  var fd = fs.openSync(config.pid, 'w+');
   fs.writeSync(fd, server.pid);
   fs.close(fd);
   server.stdout.on('data', function (data) {
-    console.log(color.blue(data.toString()));
+    console.log(color.xterm(4)(data.toString()));
   });
 
   // 捕获标准错误输出并将其打印到控制台
@@ -84,6 +96,8 @@ const watching = () => {
     console.log(color.red.bgBlackBright(data.toString()));
   });
   server.on('error', function (err) {
+    console.log(err.message);
+    // if(err.message === 'spawn js ENOENT') return;
     console.log(color.red('error on process:', err.code), err.message);
     console.log(color.red('stack:', err.stack));
     console.log(color.yellow('wait for change....'))
@@ -96,27 +110,18 @@ const watching = () => {
 
 commander.version('0.0.1')
 // .option('-h, --help', '--help show menus')
-  .option('--config <file>', 'use config file')
-  .option('--start <action>', 'start process')
-  .option('--stop <action>', 'manage worker stop')
+  .option('--config <file>', 'use config file');
 
 commander.on('--help', function () {
   console.log(color.green('   --config, use config file'));
-  console.log(color.green('   --start, start process'));
-  console.log(color.green('   --stop, start process'));
 });
 commander.parse(process.argv);
-
 if (commander.config) {
-  let conf = fs.readFileSync(pwd + '/' + commander.config);
-  console.log(conf.toString());
+  var conf = fs.readFileSync(pwd + '/' + commander.config);
   conf = JSON.parse(conf);
   config = Object.assign(config, conf);
-  console.log(config);
 }
-if (commander.start || commander.restart) {
-  run();
-}
+run();
 
 //
 // commander.command('start')

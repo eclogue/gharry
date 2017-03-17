@@ -11,7 +11,6 @@ $serv->on('Request', function($request, $response) {
 
     $response->cookie("User", "Swoole");
     $response->header("X-Server", "Swoole");
-    $response->end("<h1>Fuck Swoole122!</h1>");
+    $response->end("<h1>Fuck world!</h1>");
 });
-
 $serv->start();
