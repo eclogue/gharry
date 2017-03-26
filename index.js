@@ -30,6 +30,7 @@ var run = function () {
       startUp();
     })
     .on('unlink', function (path) {
+      console.log(color.cyan('path unlink:' + path));
       startUp(path);
     })
     .on('error', function (err) {
@@ -47,8 +48,8 @@ var startUp = function (file = '') {
     fs.close(fd);
   }
   var pid = fs.readFileSync(config.pid);
-  pid = pid.toString().replace(/(\n|\r|(\r\n)|(\u0085)|(\u2028)|(\u2029))/g, '');
-  if (pid !== 'undefined') {
+  pid = pid.toString().replace(/(\n|\r|(\r\n)|\s)/g, '');
+  if (pid) {
     var cmd = '';
     if(!config.safe) {
       cmd = util.format("ps -C %s | grep -v PID | awk '{print $1}' | xargs kill -15", pid);
@@ -104,11 +105,11 @@ var watching = () => {
   });
 
   server.on('exit', function (code, signal) {
-    console.log(color.yellow('start process fail or process exit, waiting for file changing ...'));
+    console.log(color.yellow('process state change, waiting for file changing ...'));
   });
 };
 
-commander.version('0.0.1')
+commander.version('0.1.2')
 // .option('-h, --help', '--help show menus')
   .option('--config <file>', 'use config file');
 
