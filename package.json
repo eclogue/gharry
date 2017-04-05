@@ -19,7 +19,8 @@
   "dependencies": {
     "chokidar": "^1.6.1",
     "cli-color": "^1.2.0",
-    "commander": "^2.9.0"
+    "commander": "^2.9.0",
+    "thread-sleep": "^2.0.0"
   },
   "bin": {
     "gharry": "./bin/index.js"

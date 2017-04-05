@@ -7,6 +7,7 @@ var util = require('util');
 var commander = require('commander');
 var os = require('os');
 var path = require('path');
+var sleep = require('thread-sleep');
 
 var pwd = process.env.PWD;
 var config = {
@@ -83,6 +84,7 @@ var stop = function () {
 
 
 var watching = () => {
+  sleep(config.delay || 2000);
   var server = spawn.apply(null, [config.script, [config.execute], { cwd: config.pwd }]);
   console.log(color.green('listen process pid: ', server.pid));
   var fd = fs.openSync(config.pid, 'w+');
