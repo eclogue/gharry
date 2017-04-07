@@ -2,6 +2,6 @@
   "watch": ".",
   "script": "php",
   "execute": "demo/index.php",
-  "ignore": ["node_modules"],
+  "ignore": ["node_modules", ".idea", ".git"],
   "safe": false
 }

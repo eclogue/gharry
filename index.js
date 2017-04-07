@@ -8,20 +8,22 @@ var commander = require('commander');
 var os = require('os');
 var path = require('path');
 var sleep = require('thread-sleep');
+var psTree = require('ps-tree');
 
 var pwd = process.env.PWD;
 var config = {
-  pid: os.tmpDir() + '/gharry.pid',
+  // pid: os.tmpDir() + '/gharry.pid',
+  pid: '',
   pwd: pwd,
   script: 'js',
   execute: 'index.js',
   ignored: '',
   watch: '.',
-  safe: false,
+  safe: true,
 };
 // process.stdout.write(color.erase.screen);
 // process.stdout.write(color.reset);
-var run = function () {
+var watch = function () {
   monitor.watch(config.watch, { ignored: config.ignore })
     .on('change', function (path) {
       console.log(color.cyan('path changed:' + path));
@@ -38,43 +40,50 @@ var run = function () {
       console.log(err);
       stop();
     });
-
 };
 
 var startUp = function (file = '') {
   console.log(color.bgCyan('gharry start up process'));
-  if (!fs.existsSync(config.pid)) {
-    var fd = fs.openSync(config.pid, 'w+');
-    fs.writeSync(fd, '');
-    fs.close(fd);
-  }
-  var pid = fs.readFileSync(config.pid);
-  pid = pid.toString().replace(/(\n|\r|(\r\n)|\s)/g, '');
+  var pid = config.pid;
   if (pid) {
-    var cmd = '';
-    if(!config.safe) {
-      cmd = util.format("ps -C %s | grep -v PID | awk '{print $1}' | xargs kill -15", pid);
+    if (!config.safe) {
+      // cmd = util.format("ps -C %s | grep -v PID | awk '{print $1}' | xargs kill -15", pid);
+      psTree(pid, function (err, kids) {
+        var ppid = [pid];
+        kids.map(function (p) {
+          if (ppid.indexOf(p.PID) === -1) ppid.push(p.PID);
+          if(ppid.indexOf(p.PPID) === -1) ppid.push(p.PPID);
+        });
+        console.log(ppid);
+        var kill = spawn('kill', ['-15'].concat(ppid));
+        kill.stdout.on('data', function (data) {
+          console.log(data.toString);
+        });
+        kill.stderr.on('data', (data) => {
+          console.log(`kill stderr: ${data}`);
+        });
+
+        kill.on('close', function (code) {
+          if (code !== 0) {
+            console.log(`kill process exited with code ${code}`);
+          } else {
+            run();
+          }
+        });
+        kill.on('error', function (err) {
+          console.log('Failed to start child process.', err.message);
+        });
+      });
     } else {
-      cmd = util.format("ps -C %s | grep -v PID | awk '{print $1}'", pid);
-    }
-    exec(cmd, function (err, stdout, stderr) {
-      if (err) {
-        console.log(color.red(err.message));
-        console.log(stdout, stderr);
-      }
-      if(stdout && config.safe){
-        if(file === config.execute) {
-          process.kill(pid, 'SIGTERM'); // 重启主进程
-        } else {
-          process.kill(pid, 'SIGUSR1');
-          process.kill(pid, 'SIGUSR2');
-        }
+      if (file === config.execute) {
+        process.kill(pid, 'SIGTERM'); // 重启主进程
       } else {
-        watching();
+        process.kill(pid, 'SIGUSR1');
+        process.kill(pid, 'SIGUSR2');
       }
-    });
+    }
   } else {
-    watching();
+    run();
   }
 };
 
@@ -82,14 +91,14 @@ var stop = function () {
 
 };
 
-
-var watching = () => {
+var run = () => {
   sleep(config.delay || 2000);
   var server = spawn.apply(null, [config.script, [config.execute], { cwd: config.pwd }]);
   console.log(color.green('listen process pid: ', server.pid));
-  var fd = fs.openSync(config.pid, 'w+');
-  fs.writeSync(fd, server.pid);
-  fs.close(fd);
+  config.pid = server.pid;
+  // var fd = fs.openSync(config.pid, 'w+');
+  // fs.writeSync(fd, server.pid);
+  // fs.close(fd);
   server.stdout.on('data', function (data) {
     console.log(color.xterm(4)(data.toString()));
   });
@@ -113,7 +122,7 @@ var watching = () => {
 
 commander.version('0.1.2')
 // .option('-h, --help', '--help show menus')
-  .option('--config <file>', 'use config file');
+  .option('-c, --config <file>', 'use config file');
 
 commander.on('--help', function () {
   console.log(color.green('   --config, use config file'));
@@ -124,54 +133,6 @@ if (commander.config) {
   conf = JSON.parse(conf);
   config = Object.assign(config, conf);
 }
-run();
-
-//
-// commander.command('start')
-//   .description('start server')
-//   .action(function (name) {
-//     pm2.connect(function (err) {
-//       if (err) {
-//         console.error(err);
-//         process.exit(2);
-//       }
-//
-//       pm2.start({
-//         interpreter: "php",
-//         script: executeFile,         // Script to be run
-//         exec_mode: 'fork',        // Allow your app to be clustered
-//         instances: 1,                // Optional: Scale your app by 4
-//         max_memory_restart: config.memory   // Optional: Restart your app if it reaches 100Mo
-//       }, function (err, apps) {
-//         pm2.disconnect();   // Disconnect from PM2
-//         if (err) throw err
-//       });
-//     });
-//   });
-//
-//
-// commander.arguments('<cmd>')
-//   .action(function (cmd) {
-//     pm2.connect(function (err) {
-//       if (err) {
-//         console.error(err);
-//         process.exit(2);
-//       }
-//       if (!pm2.hasOwnProperty(cmd)) {
-//         console.log('Illegal command~,Bye!');
-//         process.exit(3);
-//       }
-//       pm2[cmd]({
-//         interpreter: "php",
-//         script: executeFile,
-//         exec_mode: config.mode || 'fork',
-//         instances: 1,
-//         max_memory_restart: config.memory
-//       }, function (err, apps) {
-//         pm2.disconnect();
-//         if (err) throw err
-//       });
-//     });
-//   });
+watch();
 
 
