@@ -1,6 +1,5 @@
 var monitor = require('chokidar');
 var spawn = require('child_process').spawn;
-var exec = require('child_process').exec;
 var color = require('cli-color');
 var fs = require('fs');
 var util = require('util');
@@ -12,7 +11,6 @@ var psTree = require('ps-tree');
 
 var pwd = process.env.PWD;
 var config = {
-  // pid: os.tmpDir() + '/gharry.pid',
   pid: '',
   pwd: pwd,
   script: 'js',
@@ -20,21 +18,23 @@ var config = {
   ignored: '',
   watch: '.',
   safe: true,
+  lock: 0,
 };
+var waiting = false;
 // process.stdout.write(color.erase.screen);
 // process.stdout.write(color.reset);
 var watch = function () {
   monitor.watch(config.watch, { ignored: config.ignore })
     .on('change', function (path) {
       console.log(color.cyan('path changed:' + path));
-      startUp(path);
+      restart();
     })
     .on('ready', function () {
-      startUp();
+      restart();
     })
     .on('unlink', function (path) {
       console.log(color.cyan('path unlink:' + path));
-      startUp(path);
+      restart(path);
     })
     .on('error', function (err) {
       console.log(err);
@@ -42,9 +42,22 @@ var watch = function () {
     });
 };
 
-var startUp = function (file = '') {
+var restart = function (path) {
+  config.lock++;
+  if(config.lock > 1) return;
+  var waiting = false;
+  var cid = setInterval(function () {
+    if (!waiting) {
+      startUp(config.pid, path);
+      waiting = true;
+    } else if(config.lock < 0) {
+      clearInterval(cid);
+      config.lock = 0;
+    }
+  }, 1000);
+};
+var startUp = function (pid, file = '') {
   console.log(color.bgCyan('gharry start up process'));
-  var pid = config.pid;
   if (pid) {
     if (!config.safe) {
       // cmd = util.format("ps -C %s | grep -v PID | awk '{print $1}' | xargs kill -15", pid);
@@ -52,21 +65,20 @@ var startUp = function (file = '') {
         var ppid = [pid];
         kids.map(function (p) {
           if (ppid.indexOf(p.PID) === -1) ppid.push(p.PID);
-          if(ppid.indexOf(p.PPID) === -1) ppid.push(p.PPID);
+          if (ppid.indexOf(p.PPID) === -1) ppid.push(p.PPID);
         });
-        console.log(ppid);
         var kill = spawn('kill', ['-15'].concat(ppid));
         kill.stdout.on('data', function (data) {
           console.log(data.toString);
         });
+
         kill.stderr.on('data', (data) => {
           console.log(`kill stderr: ${data}`);
         });
 
         kill.on('close', function (code) {
-          if (code !== 0) {
-            console.log(`kill process exited with code ${code}`);
-          } else {
+          console.log(`kill process exited with code ${code}`);
+          if (code === 0) {
             run();
           }
         });
@@ -81,6 +93,7 @@ var startUp = function (file = '') {
         process.kill(pid, 'SIGUSR1');
         process.kill(pid, 'SIGUSR2');
       }
+      config.lock = -1;
     }
   } else {
     run();
@@ -92,10 +105,10 @@ var stop = function () {
 };
 
 var run = () => {
-  sleep(config.delay || 2000);
   var server = spawn.apply(null, [config.script, [config.execute], { cwd: config.pwd }]);
   console.log(color.green('listen process pid: ', server.pid));
   config.pid = server.pid;
+  config.lock = -1;
   // var fd = fs.openSync(config.pid, 'w+');
   // fs.writeSync(fd, server.pid);
   // fs.close(fd);
