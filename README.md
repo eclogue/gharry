@@ -1,9 +1,12 @@
-# gharry
-auto reload for Courser
--------
+#gharry
+
+[courser](https://github.com/racecourse/courser) 自动重载开发工具,
+    基于 nodejs fs.watch 文件更改自动重载应用,适用所有 swoole 程序
+
 
 ### install
-`npm install gharrt` 
+`npm install gharrt`   
+
 or `npm install gharry -g`
 
 ### get start
@@ -14,7 +17,7 @@ config:
   "script": "php", // 
   "execute": "demo/index.php", // execute file
   "ignore": ["node_modules"] // ignore string or array
-  "safe": "true" // save relaod server
+  "safe": "true" // safe relaod server
 }
 ```
 `gharry -c gharry.json` 

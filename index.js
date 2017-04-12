@@ -77,7 +77,6 @@ var startUp = function (pid, file = '') {
         });
 
         kill.on('close', function (code) {
-          console.log(`kill process exited with code ${code}`);
           if (code === 0) {
             run();
           }
