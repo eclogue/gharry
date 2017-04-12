@@ -1,7 +1,7 @@
 {
   "watch": ".",
   "script": "php",
-  "execute": "demo/index.php",
+  "execute": "index.php",
   "ignore": ["node_modules", ".idea", ".git"],
   "safe": false
 }
