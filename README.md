@@ -1,7 +1,7 @@
 # gharry
 
 为 [courser](https://github.com/racecourse/courser) 而写的自动重载工具,
-    基于 nodejs fs.watch 文件更改自动重载应用,适用所有 swoole 程序
+    基于 nodejs `fs.watch`, 文件更改自动重载应用,适用所有 swoole 程序
 
 
 ### install
