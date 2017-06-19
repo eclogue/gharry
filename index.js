@@ -1,12 +1,12 @@
 var monitor = require('chokidar');
 var spawn = require('child_process').spawn;
+var exec = require('child_process').exec;
 var color = require('cli-color');
 var fs = require('fs');
 var util = require('util');
 var commander = require('commander');
 var os = require('os');
 var path = require('path');
-var sleep = require('thread-sleep');
 var psTree = require('ps-tree');
 
 var pwd = process.env.PWD;
@@ -24,7 +24,9 @@ var waiting = false;
 // process.stdout.write(color.erase.screen);
 // process.stdout.write(color.reset);
 var watch = function () {
-  monitor.watch(config.watch, { ignored: config.ignore })
+  monitor.watch(config.watch, {
+      ignored: config.ignore
+    })
     .on('change', function (path) {
       console.log(color.cyan('path changed:' + path));
       restart();
@@ -44,13 +46,13 @@ var watch = function () {
 
 var restart = function (path) {
   config.lock++;
-  if(config.lock > 1) return;
+  if (config.lock > 1) return;
   var waiting = false;
   var cid = setInterval(function () {
     if (!waiting) {
       startUp(config.pid, path);
       waiting = true;
-    } else if(config.lock < 0) {
+    } else if (config.lock < 0) {
       clearInterval(cid);
       config.lock = 0;
     }
@@ -104,13 +106,26 @@ var stop = function () {
 };
 
 var run = () => {
-  var server = spawn.apply(null, [config.script, [config.execute], { cwd: config.pwd }]);
-  console.log(color.green('listen process pid: ', server.pid));
-  config.pid = server.pid;
+  var server = spawn.apply(null, [config.script, [config.execute], {
+    cwd: config.pwd
+  }]);
   config.lock = -1;
-  // var fd = fs.openSync(config.pid, 'w+');
-  // fs.writeSync(fd, server.pid);
-  // fs.close(fd);
+  console.log(color.green('listen process pid: ', server.pid));
+  setTimeout(function () {
+    exec('ps -C ' + server.pid + '| grep -v PID | awk \'{print $1}\'', (err, res) => {
+      if (err) {
+        console.log(color.red('something is wrong, please issue me'));
+      }
+      res = res.replace(/\s/g, '');
+      if (res) {
+        config.pid = server.pid;
+      } else {
+        config.pid = '';
+      }
+    });
+  }, 2000);
+
+
   server.stdout.on('data', function (data) {
     console.log(color.xterm(4)(data.toString()));
   });
@@ -133,7 +148,7 @@ var run = () => {
 };
 
 commander.version('0.1.2')
-// .option('-h, --help', '--help show menus')
+  // .option('-h, --help', '--help show menus')
   .option('-c, --config <file>', 'use config file');
 
 commander.on('--help', function () {
@@ -146,5 +161,3 @@ if (commander.config) {
   config = Object.assign(config, conf);
 }
 watch();
-
-
