@@ -13,8 +13,8 @@ var pwd = process.env.PWD;
 var config = {
   pid: '',
   pwd: pwd,
-  script: 'js',
-  execute: 'index.js',
+  script: 'index.js',
+  language: 'node',
   ignored: '',
   watch: '.',
   safe: true,
@@ -107,13 +107,13 @@ var stop = function () {
 };
 
 var run = () => {
-  var args = [config.execute];
+  var args = [config.script];
   var keys = Object.keys(config.args);
   keys.map(function(key) {
     args.push(key);
     args.push(config.args[key]);
   });
-  var server = spawn.apply(null, [config.script, args, {
+  var server = spawn.apply(null, [config.language, args, {
       cwd: config.pwd
     }]);
   config.lock = -1;

@@ -1,6 +1,6 @@
 {
   "name": "gharry",
-  "version": "1.0.3",
+  "version": "2.0.1",
   "description": "crane for barge",
   "main": "index.js",
   "scripts": {
