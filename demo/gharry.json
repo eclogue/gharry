@@ -3,5 +3,8 @@
   "script": "php",
   "execute": "index.php",
   "ignore": ["node_modules", ".idea", ".git"],
-  "safe": false
+  "safe": false,
+  "args": {
+    "--env": "develop"
+  }
 }

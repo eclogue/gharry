@@ -19,6 +19,7 @@ var config = {
   watch: '.',
   safe: true,
   lock: 0,
+  args: {},
 };
 var waiting = false;
 // process.stdout.write(color.erase.screen);
@@ -106,9 +107,15 @@ var stop = function () {
 };
 
 var run = () => {
-  var server = spawn.apply(null, [config.script, [config.execute], {
-    cwd: config.pwd
-  }]);
+  var args = [config.execute];
+  var keys = Object.keys(config.args);
+  keys.map(function(key) {
+    args.push(key);
+    args.push(config.args[key]);
+  });
+  var server = spawn.apply(null, [config.script, args, {
+      cwd: config.pwd
+    }]);
   config.lock = -1;
   console.log(color.green('listen process pid: ', server.pid));
   setTimeout(function () {

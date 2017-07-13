@@ -1,6 +1,7 @@
 <?php
 $serv = new Swoole\Http\Server("127.0.0.1", 9502);
-
+$argument = getopt('e:h:v:', ['env:', 'help:', 'version:']);
+var_dump($argument);
 $serv->on('Request', function($request, $response) {
     var_dump($request->header);
     var_dump($request->server);
